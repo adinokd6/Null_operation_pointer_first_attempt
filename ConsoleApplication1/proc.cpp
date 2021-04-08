@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <tchar.h>
 #include "proc.h"
+#include <iostream>
 
 DWORD GetProcId(const wchar_t* procName)
 {
@@ -58,8 +59,9 @@ uintptr_t GetModuleBaseAddress(DWORD procId, const wchar_t* modName)
 uintptr_t FindDMAAddy(HANDLE hProc, uintptr_t ptr, std::vector<unsigned int> offsets)
 {
 	uintptr_t addr = ptr;
-	for (unsigned int i = 0;i < offsets.size();++i)
+	for (unsigned int i = 0;i < offsets.size();i++)
 	{
+		
 		ReadProcessMemory(hProc, (BYTE*)addr, &addr, sizeof(uintptr_t), 0);
 	}
 	return addr;

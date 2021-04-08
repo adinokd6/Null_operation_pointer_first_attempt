@@ -2,48 +2,62 @@
 #include <vector>
 #include <Windows.h>
 #include "proc.h"
+#include "mem.h"
 
 
 
 int main()
 {
-    //Get ProcId of the target process
-    DWORD procId = GetProcId(L"gta_sa.exe");
+	HANDLE hProcess = 0;
+	uintptr_t moduleBase = 0, localPlayerPtr = 0, dmg_addr = 0;
+	bool b_dmg = false;
 
-    //Getmodulebaseaddress
-    uintptr_t moduleBase = GetModuleBaseAddress(procId, L"gta_sa.exe");
+	DWORD procId = GetProcId(L"eurotrucks2.exe");
+	const int newValue = 0;
+	if (procId)
+	{
+		hProcess = OpenProcess(PROCESS_ALL_ACCESS, NULL, procId);
 
-    //Get Handle to Process
-    HANDLE hProcess = 0;
-    hProcess = OpenProcess(PROCESS_ALL_ACCESS, NULL, procId);
+		moduleBase = GetModuleBaseAddress(procId, L"eurotrucks2.exe");
 
-    //Resolve base address of the pointer chain
-    uintptr_t dynamicPtrBaseAddr = moduleBase + 0x763B8;
+		localPlayerPtr = moduleBase + 0x0127D710;
 
-    std::cout << "DynamicPtrBaseAddr = " << "0x" << std::hex << dynamicPtrBaseAddr << std::endl;
+		dmg_addr = FindDMAAddy(hProcess, localPlayerPtr, { 0x18,0x68,0x3e8,0x18,0x8,0x10 });
+	}
+	else
+	{
+		std::cout << "Process eurotrucks2.exe not found\n";
+		getchar();
+		return 0;
+	}
 
-    //Resolve our ammo pointer chain
-    std::vector<unsigned int> ammoOffsets = { 0xA4, 0x12, 0x0 };
-    uintptr_t ammoAddr = FindDMAAddy(hProcess, dynamicPtrBaseAddr, ammoOffsets);
+	DWORD dwExit = 0;
 
-    std::cout << "ammoAddr = " << "0x" << std::hex << ammoAddr << std::endl;
+	
 
-    //Read Ammo value
-    int ammoValue = 0;
+	while(true)
+	{
 
-    ReadProcessMemory(hProcess, (BYTE*)ammoAddr, &ammoValue, sizeof(ammoValue), nullptr);
-    std::cout << "Curent ammo = " << std::dec << ammoValue << std::endl;
+		if (GetAsyncKeyState(VK_NUMPAD1) & 1)
+		{
+			b_dmg = !b_dmg;
+			if (b_dmg)
+			{
+				std::cout << "Dupa";
+				getchar();
+				mem::PatchEx((BYTE*)dmg_addr, (BYTE*)&newValue, sizeof(newValue), hProcess);
+			}
+		}
 
-    //Write to it
-    int newAmmo = 1500;
-    WriteProcessMemory(hProcess, (BYTE*)ammoAddr, &newAmmo, sizeof(newAmmo), nullptr);
 
-    //Read out again
-    ReadProcessMemory(hProcess, (BYTE*)ammoAddr, &ammoValue, sizeof(ammoValue), nullptr);
+		if (GetAsyncKeyState(VK_INSERT) & 1)
+		{
+			return 0;
+		}
 
-    std::cout << "New ammo = " << std::dec << ammoValue << std::endl;
+		Sleep(10);
+	}
 
-    getchar();
-
-    return 0;
+	std::cout << "Process not found";
+	return 0;
 }
